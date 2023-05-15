@@ -13,6 +13,7 @@ export function App() {
   const { data: paginatedTransactions, ...paginatedTransactionsUtils } = usePaginatedTransactions()
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
   const [isLoading, setIsLoading] = useState(false)
+  const [retrievedAllTransactions, setRetrievedAllTransactions] = useState(false)
 
   const transactions = useMemo(
     () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
@@ -26,18 +27,21 @@ export function App() {
     await employeeUtils.fetchAll()
     await paginatedTransactionsUtils.fetchAll()
 
+    setRetrievedAllTransactions(false)
     setIsLoading(false)
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
 
   const loadMoreTransactions = useCallback(async () => {
     transactionsByEmployeeUtils.invalidateData()
     await paginatedTransactionsUtils.fetchAll()
+    setRetrievedAllTransactions(true)
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
   
   const loadTransactionsByEmployee = useCallback(
     async (employeeId: string) => {
       paginatedTransactionsUtils.invalidateData()
-      employeeId === "" ? paginatedTransactionsUtils.fetchAll():await transactionsByEmployeeUtils.fetchById(employeeId)
+      employeeId === "" ? loadAllTransactions():await transactionsByEmployeeUtils.fetchById(employeeId)
+      setRetrievedAllTransactions(true)
     },
     [paginatedTransactionsUtils, transactionsByEmployeeUtils]
   )
@@ -45,6 +49,7 @@ export function App() {
   useEffect(() => {
     if (employees === null && !employeeUtils.loading) {
       loadAllTransactions()
+      setRetrievedAllTransactions(true)
     }
   }, [employeeUtils.loading, employees, loadAllTransactions])
 
@@ -79,7 +84,7 @@ export function App() {
         <div className="RampGrid">
           <Transactions transactions={transactions} />
 
-          {transactions !== null && (
+          {transactions !== null && !retrievedAllTransactions && (
             <button
               className="RampButton"
               disabled={paginatedTransactionsUtils.loading}
